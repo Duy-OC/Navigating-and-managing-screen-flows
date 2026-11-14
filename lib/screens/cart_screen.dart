@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:food_nav_demo/models/cart_item.dart';
+import 'package:food_nav_demo/models/cart.dart';
 import 'package:food_nav_demo/utils/format.dart';
 import 'package:food_nav_demo/widgets/current_url_bar.dart';
 import 'package:food_nav_demo/widgets/food_image.dart';
 
 class CartScreen extends StatelessWidget {
-  final List<CartItem>? items;
+  final Cart? cart;
 
-  const CartScreen({super.key, this.items});
+  const CartScreen({super.key, this.cart});
 
   Future<void> _order(BuildContext context, int total) async {
     final ok = await showDialog<bool>(
@@ -35,13 +35,13 @@ class CartScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cart = items;
+    final cart = this.cart; // biến cục bộ để Dart promote kiểu non-null
     final appBar = AppBar(
       title: const Text('Giỏ hàng'),
       bottom: const CurrentUrlBar(),
     );
 
-    // [NAV] extra bị mất khi mở thẳng bằng URL → items = null
+    // [NAV] extra bị mất khi mở thẳng bằng URL → cart = null
     if (cart == null || cart.isEmpty) {
       return Scaffold(
         appBar: appBar,
@@ -65,7 +65,7 @@ class CartScreen extends StatelessWidget {
       );
     }
 
-    final total = cart.fold<int>(0, (sum, item) => sum + item.total);
+    final total = cart.totalPrice;
     final textTheme = Theme.of(context).textTheme;
     return Scaffold(
       appBar: appBar,
@@ -74,7 +74,7 @@ class CartScreen extends StatelessWidget {
           Expanded(
             child: ListView(
               children: [
-                for (final item in cart)
+                for (final item in cart.items)
                   ListTile(
                     leading: FoodImage(food: item.food, width: 56, height: 56),
                     title: Text(item.food.name),

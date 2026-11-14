@@ -1,5 +1,5 @@
 import 'package:go_router/go_router.dart';
-import 'package:food_nav_demo/models/cart_item.dart';
+import 'package:food_nav_demo/models/cart.dart';
 import 'package:food_nav_demo/screens/cart_screen.dart';
 import 'package:food_nav_demo/screens/detail_screen.dart';
 import 'package:food_nav_demo/screens/menu_screen.dart';
@@ -30,7 +30,7 @@ GoRouter createRouter() => GoRouter(
               name: 'cart',
               // [NAV] nhận dữ liệu truyền qua extra (có thể null nếu mở thẳng bằng URL)
               builder: (context, state) =>
-                  CartScreen(items: state.extra as List<CartItem>?),
+                  CartScreen(cart: state.extra as Cart?),
             ),
           ],
         ),

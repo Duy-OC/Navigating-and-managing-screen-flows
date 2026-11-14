@@ -7,4 +7,6 @@ class CartItem {
   const CartItem(this.food, this.quantity);
 
   int get total => food.price * quantity;
+
+  CartItem copyWith({int? quantity}) => CartItem(food, quantity ?? this.quantity);
 }

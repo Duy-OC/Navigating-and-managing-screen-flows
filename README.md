@@ -29,6 +29,8 @@ flutter test
 
 Cấu hình route nằm trong `lib/router.dart`, các màn hình trong `lib/screens/`.
 
+Logic nghiệp vụ (cộng dồn giỏ, tổng tiền, giới hạn số lượng) nằm trong `lib/models/cart.dart` (đối tượng `Cart` bất biến, truyền qua `extra`), có unit test ở `test/cart_test.dart` và `test/format_test.dart`. Các màn hình chỉ hiển thị và điều hướng.
+
 ## 4. So sánh với Navigator 1.0
 
 ```dart
@@ -36,7 +38,7 @@ Cấu hình route nằm trong `lib/router.dart`, các màn hình trong `lib/scre
 MaterialApp(
   onGenerateRoute: (settings) {
     if (settings.name == '/cart') {
-      return MaterialPageRoute(builder: (_) => CartScreen(items: settings.arguments as List<CartItem>));
+      return MaterialPageRoute(builder: (_) => CartScreen(cart: settings.arguments as Cart));
     }
     return null;
   },

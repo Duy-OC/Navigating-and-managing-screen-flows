@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:food_nav_demo/data/foods.dart';
+import 'package:food_nav_demo/models/cart.dart';
 import 'package:food_nav_demo/utils/format.dart';
 import 'package:food_nav_demo/widgets/current_url_bar.dart';
 import 'package:food_nav_demo/widgets/food_image.dart';
@@ -15,7 +16,7 @@ class DetailScreen extends StatefulWidget {
 }
 
 class _DetailScreenState extends State<DetailScreen> {
-  int _qty = 1;
+  int _qty = Cart.minQuantity;
   bool _allowPop = false;
 
   Future<void> _onPopInvoked(bool didPop, int? result) async {
@@ -76,7 +77,7 @@ class _DetailScreenState extends State<DetailScreen> {
     final textTheme = Theme.of(context).textTheme;
     return PopScope<int>(
       // [NAV] đã đổi số lượng mà chưa thêm → chặn Back để hỏi lại
-      canPop: _qty == 1 || _allowPop,
+      canPop: _qty == Cart.minQuantity || _allowPop,
       onPopInvokedWithResult: _onPopInvoked,
       child: Scaffold(
         appBar: AppBar(
@@ -103,7 +104,7 @@ class _DetailScreenState extends State<DetailScreen> {
               children: [
                 IconButton.outlined(
                   icon: const Icon(Icons.remove),
-                  onPressed: _qty > 1 ? () => setState(() => _qty--) : null,
+                  onPressed: _qty > Cart.minQuantity ? () => setState(() => _qty--) : null,
                 ),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -111,7 +112,7 @@ class _DetailScreenState extends State<DetailScreen> {
                 ),
                 IconButton.outlined(
                   icon: const Icon(Icons.add),
-                  onPressed: _qty < 10 ? () => setState(() => _qty++) : null,
+                  onPressed: _qty < Cart.maxQuantity ? () => setState(() => _qty++) : null,
                 ),
               ],
             ),
