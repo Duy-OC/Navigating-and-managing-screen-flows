@@ -1,0 +1,867 @@
+% Chủ đề 9. Điều hướng và quản lý luồng màn hình
+% Biên dịch: xelatex slidechude9.tex (chạy 2 lần để TikZ định vị overlay)
+\documentclass[t,aspectratio=169,10pt]{beamer}
+
+\usepackage{fontspec}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,calc,shapes.geometric,fit,backgrounds}
+\usepackage{listings}
+\usepackage{fancyvrb}
+\usepackage[most]{tcolorbox}
+\usepackage{xcolor}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{colortbl}
+
+% ---------------------------------------------------------------- Fonts
+\setsansfont{DejaVu Sans}
+\setmainfont{DejaVu Sans}
+\setmonofont{Liberation Mono}
+\newfontfamily\carlito{Carlito}
+\usefonttheme{professionalfonts}
+
+% ---------------------------------------------------------------- Colors (lấy mẫu từ slidechude5.pdf)
+\definecolor{navy}{RGB}{0,0,80}
+\definecolor{navydark}{RGB}{0,0,60}
+\definecolor{gold}{RGB}{255,192,0}
+\definecolor{goldnum}{RGB}{255,209,0}
+\definecolor{bodytext}{RGB}{0,0,40}
+\definecolor{codebg}{RGB}{242,242,242}
+\definecolor{codetext}{RGB}{40,40,40}
+\definecolor{codecomment}{RGB}{110,110,110}
+\definecolor{captiongray}{RGB}{110,110,110}
+\definecolor{rowalt}{RGB}{242,242,246}
+\definecolor{boxblue}{RGB}{218,228,248}
+\definecolor{boxgreen}{RGB}{214,240,214}
+\definecolor{boxyellow}{RGB}{255,236,170}
+\definecolor{boxred}{RGB}{250,214,214}
+
+\setbeamercolor{normal text}{fg=bodytext,bg=white}
+\setbeamercolor{structure}{fg=navy}
+\setbeamertemplate{navigation symbols}{}
+\setbeamersize{text margin left=0.72cm,text margin right=0.72cm}
+\setbeamertemplate{itemize item}{\color{navy}\tiny$\blacksquare$}
+\setbeamertemplate{itemize subitem}{\color{bodytext}–}
+
+% ---------------------------------------------------------------- Header (thanh tiêu đề navy + logo)
+\newcommand{\seclabel}{}
+\newcommand{\setsec}[1]{\renewcommand{\seclabel}{#1}}
+
+\setbeamertemplate{frametitle}{%
+  \begin{tikzpicture}[remember picture,overlay,x=\paperwidth,y=-\paperheight,
+                      shift={(current page.north west)}]
+    % logo khoa
+    \node[anchor=west,inner sep=0] at (0.018,0.064)
+      {\includegraphics[width=0.125\paperwidth]{assets/logo_header.png}};
+    % bóng đổ
+    \foreach \i/\op in {0.010/0.05,0.007/0.10,0.004/0.18,0.002/0.25}{
+      \fill[black,opacity=\op] (0.191-\i,0) rectangle (1,0.126+\i*1.6);}
+    % thanh tiêu đề
+    \fill[navy] (0.191,0) rectangle (1,0.126);
+    \fill[navydark] (0.953,0.035) rectangle (1,0.118);
+    \node[text=gold,font=\fontsize{4.6}{5}\selectfont\bfseries] at (0.576,0.024)
+      {\MakeUppercase{\seclabel}};
+    \node[text=white,font=\fontsize{12.5}{14}\selectfont\bfseries] at (0.576,0.077)
+      {\insertframetitle};
+    \node[text=goldnum,font=\fontsize{11}{12}\selectfont\bfseries] at (0.9765,0.071)
+      {\insertframenumber};
+  \end{tikzpicture}%
+  \vspace*{0.95cm}%
+}
+
+% ---------------------------------------------------------------- Nền slide tiêu đề / cảm ơn
+\newcommand{\coverbackground}{%
+  \begin{tikzpicture}[remember picture,overlay,x=\paperwidth,y=-\paperheight,
+                      shift={(current page.north west)}]
+    \fill[navy] (0,0) rectangle (1,1);
+    % góc trên phải: trắng + sọc vàng chéo
+    \fill[white] (0.650,0) -- (1,0) -- (1,0.708) -- cycle;
+    \fill[gold] (0.668,0) -- (0.742,0) -- (1,0.505) -- (1,0.650) -- cycle;
+    \fill[white] (0.742,0) -- (1,0) -- (1,0.505) -- cycle;
+    % sọc vàng góc dưới trái
+    \fill[gold] (0,0.762) -- (0.138,1) -- (0.080,1) -- (0,0.862) -- cycle;
+    \draw[white,line width=0.9pt] (0.006,0.758) -- (0.144,0.996);
+    % logo tròn
+    \node[inner sep=0] at (0.821,0.276)
+      {\includegraphics[width=0.153\paperwidth]{assets/logo_round.png}};
+  \end{tikzpicture}%
+}
+
+% ---------------------------------------------------------------- Code
+\lstdefinelanguage{Dart}{
+  morekeywords={abstract,as,async,await,break,case,catch,class,const,continue,
+    default,else,extends,false,final,for,if,implements,import,in,is,late,new,
+    null,on,required,rethrow,return,static,super,switch,this,throw,true,try,
+    var,void,while,with,get,set,bool,int,double,String,Future,Object},
+  sensitive=true,
+  morecomment=[l]{//},
+  morestring=[b]',
+  morestring=[b]",
+}
+\lstset{
+  language=Dart,
+  basicstyle=\ttfamily\fontsize{5.7}{6.9}\selectfont\color{codetext},
+  keywordstyle=\color{codetext},
+  commentstyle=\color{codecomment}\itshape,
+  stringstyle=\color{codetext},
+  backgroundcolor=\color{codebg},
+  frame=none,
+  xleftmargin=3pt,xrightmargin=3pt,
+  framexleftmargin=3pt,framexrightmargin=3pt,
+  framextopmargin=3pt,framexbottommargin=3pt,
+  aboveskip=1pt,belowskip=4pt,
+  columns=fullflexible,keepspaces=true,
+  showstringspaces=false,
+  breaklines=false,
+  extendedchars=true,
+  upquote=true,
+}
+\newtcolorbox{codebox}{enhanced,colback=codebg,colframe=codebg,boxrule=0pt,arc=0pt,
+  left=3pt,right=3pt,top=2pt,bottom=2pt,boxsep=0pt,before skip=1pt,after skip=4pt}
+\newcommand{\codefont}{\fontsize{6.3}{7.7}\selectfont\color{codetext}}
+\newcommand{\codefontS}{\fontsize{5.6}{6.8}\selectfont\color{codetext}}
+\newcommand{\codelabel}[1]{\vspace{2pt}{\fontsize{6.6}{8}\selectfont\bfseries\color{bodytext}#1}\par\vspace{1pt}}
+
+% ---------------------------------------------------------------- Tiện ích văn bản
+\newcommand{\body}{\fontsize{7.6}{9.6}\selectfont}
+\newcommand{\bodyR}{\fontsize{8.2}{10.4}\selectfont}
+\newcommand{\para}[1]{#1\par\vspace{5.5pt}}
+\newcommand{\bodyL}{\fontsize{9.2}{12.4}\selectfont}
+\newcommand{\kp}[1]{\par\noindent\hangindent=10pt\hangafter=1\makebox[10pt][l]{\color{gold}\rule[1.4pt]{3.6pt}{3.6pt}}#1\par\vspace{11pt}}
+\newcommand{\figcap}[1]{{\centering\fontsize{5.2}{6}\selectfont\itshape\color{captiongray}#1\par}}
+\newcommand{\source}[1]{%
+  \begin{tikzpicture}[remember picture,overlay,x=\paperwidth,y=-\paperheight,
+                      shift={(current page.north west)}]
+    \node[anchor=south west,text=captiongray,font=\fontsize{5}{6}\selectfont,
+          text width=0.9\paperwidth,align=left] at (0.045,0.975) {Nguồn: #1};
+  \end{tikzpicture}}
+
+% Khối sơ đồ
+\tikzset{
+  box/.style={draw=navy,fill=boxblue,rounded corners=1.5pt,align=center,
+    font=\fontsize{5.4}{6.4}\selectfont,inner sep=2.5pt,minimum height=0.48cm},
+  arr/.style={-{Stealth[length=3pt]},draw=navy,line width=0.55pt},
+  lbl/.style={font=\fontsize{4.8}{5.6}\selectfont,text=bodytext,align=center},
+}
+
+\newcommand{\main}[1]{\item[\color{navy}\tiny$\blacksquare$]{\fontsize{13}{15}\selectfont\bfseries\color{navy}#1}\par\vspace{3pt}}
+
+\newcommand{\sub}[1]{\item[]\hspace{0.15cm}{\fontsize{11}{12.5}\selectfont\color{bodytext}– #1}\par\vspace{3.2pt}}
+
+\newcommand{\shot}[2]{%
+    \begin{minipage}[t]{0.3\textwidth}\centering
+      \includegraphics[height=6.85cm]{#1}\par\vspace{3pt}
+      {\fontsize{6.6}{8}\selectfont\bfseries\color{bodytext}#2}
+    \end{minipage}}
+
+\begin{document}
+\frenchspacing
+
+% =====================================================================
+% 1. Slide tiêu đề
+% =====================================================================
+{
+\setbeamertemplate{background}{\coverbackground}
+\begin{frame}[plain]
+  \begin{tikzpicture}[remember picture,overlay,x=\paperwidth,y=-\paperheight,
+                      shift={(current page.north west)}]
+    \node[anchor=west,text=white,font=\carlito\fontsize{9.5}{11}\selectfont]
+      at (0.060,0.105) {KHOA ĐIỆN TỬ VIỄN THÔNG};
+    \node[anchor=west,text=gold,font=\carlito\fontsize{12.5}{14}\selectfont\bfseries]
+      at (0.060,0.245) {LẬP TRÌNH ĐA NỀN TẢNG};
+    \node[anchor=west,text=white,font=\carlito\fontsize{19.5}{22}\selectfont\bfseries,
+          text width=0.66\paperwidth,align=left]
+      at (0.060,0.400) {Chủ đề 9. Điều hướng và quản lý luồng màn hình};
+    \node[anchor=west,text=gold,font=\carlito\fontsize{10.5}{12}\selectfont]
+      at (0.060,0.558) {Flutter: Navigator • go\_router • PopScope • Deep link};
+    \node[anchor=north west,text=white,font=\carlito\fontsize{9.8}{12.4}\selectfont,align=left]
+      at (0.060,0.675) {Sinh viên thực hiện:\\Trần Đăng Duy\\Phan Văn Trà};
+    \node[anchor=north west,text=white,font=\carlito\fontsize{9.8}{12.4}\selectfont,align=left]
+      at (0.558,0.675) {Giảng viên hướng dẫn:\\Nguyễn Duy Nhật Viễn};
+  \end{tikzpicture}
+\end{frame}
+}
+
+% =====================================================================
+% 2. Nội dung trình bày
+% =====================================================================
+\setsec{Nội dung báo cáo}
+\begin{frame}{Nội dung trình bày}
+  \vspace{0.12cm}
+  \begin{list}{}{\leftmargin=0.6cm\itemsep=0pt}
+  \carlito
+  \main{1. Cơ sở lý thuyết}
+  \sub{Navigator \& ngăn xếp route; truyền dữ liệu đi và trả kết quả về}
+  \sub{Router API (Navigator 2.0): điều hướng khai báo, page-backed / pageless}
+  \sub{go\_router: route theo đường dẫn, tham số URL, go và push}
+  \sub{Kiểm soát nút Back với PopScope; dialog là route; state dùng chung}
+  \main{2. Thực hành – demo ứng dụng “Gọi món mini”}
+  \sub{Chức năng {\fontspec{DejaVu Sans}⇄} kiến thức \& luồng màn hình}
+  \sub{GoRouter, pushNamed + extra, PopScope, giỏ hàng, context.go, Navigator 1.0}
+  \main{3. Kết luận \& tài liệu tham khảo}
+  \end{list}
+\end{frame}
+
+% =====================================================================
+% 3. Phân công công việc
+% =====================================================================
+\setsec{Tổ chức thực hiện}
+\begin{frame}{Phân công công việc}
+  \vspace{0.3cm}
+  \renewcommand{\arraystretch}{1.0}
+  \setlength{\tabcolsep}{6pt}
+  \fontsize{8}{10}\selectfont
+  \begin{tabularx}{\linewidth}{@{\hspace{5pt}}>{\raggedright\arraybackslash\bfseries}p{2.75cm} X >{\bfseries\color{navy}}p{1.0cm}}
+    \rowcolor{navy}
+    \multicolumn{1}{@{\hspace{5pt}}l}{\rule{0pt}{11pt}\color{white}\bfseries\fontsize{7.6}{9}\selectfont Thành viên} &
+    \multicolumn{1}{l}{\rule{0pt}{11pt}\color{white}\bfseries\fontsize{7.6}{9}\selectfont Nhiệm vụ thực hiện} &
+    \multicolumn{1}{l}{\rule{0pt}{11pt}\color{white}\bfseries\fontsize{7.6}{9}\selectfont Tỷ lệ}\\[3pt]
+    \rule{0pt}{12pt}\fontsize{8.2}{10}\selectfont Phan Văn Trà &
+    \parbox[t]{\linewidth}{\raggedright%
+      Màn Thực đơn: \texttt{pushNamed} + \texttt{extra}, nhận kết quả.\\[5pt]
+      Màn Chi tiết: \texttt{PopScope} xác nhận rời màn.\\[5pt]
+      Màn Giới thiệu (Navigator 1.0), Back 2 lần để thoát.\\[5pt]
+      Demo Router API và trang lỗi.} &
+    \fontsize{8.6}{10}\selectfont 50\%\\[6pt]
+    \arrayrulecolor{black!15}\hline
+    \rule{0pt}{14pt}\fontsize{8.2}{10}\selectfont Trần Đăng Duy &
+    \parbox[t]{\linewidth}{\raggedright%
+      \texttt{Cart}, \texttt{CartController} và màn Giỏ hàng.\\[5pt]
+      Đọc dữ liệu CSV, model \texttt{Food}.\\[5pt]
+      Cấu hình \texttt{GoRouter}: route lồng, route có tên.\\[5pt]
+      Unit test, test điều hướng, build APK.} &
+    \fontsize{8.6}{10}\selectfont 50\%\\[6pt]
+    \hline
+  \end{tabularx}
+\end{frame}
+
+% =====================================================================
+% 4. Navigator & ngăn xếp route
+% =====================================================================
+\setsec{Cơ sở lý thuyết}
+\begin{frame}[fragile]{Navigator: quản lý màn hình theo ngăn xếp}
+  \begin{columns}[T,onlytextwidth]
+  \begin{column}{0.53\textwidth}\bodyL
+    \vspace{0.35cm}
+    \kp{\textbf{Navigator} giữ các màn theo \textbf{ngăn xếp}; màn trên cùng là màn đang hiện.}
+    \kp{\textbf{push} thêm màn lên đỉnh, \textbf{pop} gỡ màn đỉnh. Nút Back cũng gọi pop.}
+    \kp{\textbf{Named routes}: flutter.dev không khuyến nghị cho đa số app.}
+  \end{column}
+  \begin{column}{0.44\textwidth}
+    \centering
+    \vspace{0.6cm}
+    \begin{tikzpicture}[x=1cm,y=1cm,scale=1.15,transform shape]
+      \tikzset{st/.style={draw=navy,fill=boxblue,minimum width=2.1cm,minimum height=0.45cm,
+        font=\fontsize{5.6}{6.6}\selectfont}}
+      % Stack trước
+      \node[st] (a1) at (0,0) {Thực đơn \texttt{/}};
+      \node[st] (a2) at (0,0.5) {Chi tiết món};
+      \node[lbl,below=1pt of a1] {Ngăn xếp};
+      % Stack sau push
+      \node[st] (b1) at (3.2,0) {Thực đơn \texttt{/}};
+      \node[st] (b2) at (3.2,0.5) {Chi tiết món};
+      \node[st,fill=boxyellow] (b3) at (3.2,1.0) {Giỏ hàng (đỉnh)};
+      \node[lbl,below=1pt of b1] {Sau push};
+      \draw[arr] ($(a2.east)+(0.05,0.15)$) to[bend left=25] node[lbl,above,pos=0.5,yshift=2pt]{push(route)} ($(b3.west)+(-0.05,0)$);
+      \draw[arr] ($(b2.west)+(-0.05,-0.15)$) to[bend left=20] node[lbl,below,pos=0.5,yshift=-2pt]{pop(result)} ($(a2.east)+(0.05,-0.12)$);
+      \draw[navy!40,dashed] (1.6,-0.5) -- (1.6,1.5);
+    \end{tikzpicture}
+    \par\vspace{4pt}
+    \figcap{push đặt route lên đỉnh; pop gỡ route đỉnh và có thể trả kết quả}
+  \end{column}
+  \end{columns}
+  \source{docs.flutter.dev/ui/navigation · api.flutter.dev/flutter/widgets/Navigator-class.html}
+\end{frame}
+
+% =====================================================================
+% 5. Truyền dữ liệu
+% =====================================================================
+\begin{frame}[fragile]{Truyền dữ liệu giữa các màn hình}
+  \begin{columns}[T,onlytextwidth]
+  \begin{column}{0.53\textwidth}\bodyL
+    \vspace{0.35cm}
+    \kp{\textbf{Chiều đi:} constructor, \texttt{arguments} hoặc \texttt{extra}.}
+    \kp{\textbf{Chiều về:} \texttt{await push()} nhận giá trị từ \texttt{pop(result)}.}
+    \kp{Bấm Back → kết quả \texttt{null}. Sau \texttt{await} kiểm tra \textbf{mounted}.}
+  \end{column}
+  \begin{column}{0.44\textwidth}
+    \centering
+    \vspace{0.6cm}
+    \begin{tikzpicture}[x=1cm,y=1cm,scale=1.15,transform shape]
+      \node[box,minimum width=1.6cm,minimum height=1.6cm] (A) at (0,0) {Màn A\\[2pt]\texttt{await push()}};
+      \node[box,minimum width=1.6cm,minimum height=1.6cm,fill=boxyellow] (B) at (3.4,0) {Màn B\\[2pt]chọn dữ liệu};
+      \draw[arr] ($(A.east)+(0,0.35)$) -- node[lbl,above]{args / extra} ($(B.west)+(0,0.35)$);
+      \draw[arr] ($(B.west)+(0,-0.35)$) -- node[lbl,below]{pop(result)} ($(A.east)+(0,-0.35)$);
+      \node[lbl,below=8pt of A,text width=2.2cm] (n) {result == null\\khi bấm Back / hủy};
+    \end{tikzpicture}
+    \par\vspace{5pt}
+    \figcap{Dữ liệu đi theo tham số, quay về qua kết quả pop}
+  \end{column}
+  \end{columns}
+  \source{docs.flutter.dev/cookbook/navigation/returning-data · docs.flutter.dev/cookbook/navigation/passing-data}
+\end{frame}
+
+% =====================================================================
+% 6. Router API
+% =====================================================================
+\begin{frame}{Router API (Navigator 2.0): điều hướng khai báo}
+  \begin{columns}[T,onlytextwidth]
+  \begin{column}{0.50\textwidth}\bodyL
+    \vspace{0.35cm}
+    \kp{Dùng \textbf{Router} khi cần deep link, nhiều Navigator hoặc chạy web.}
+    \kp{\textbf{Khai báo:} URL → danh sách Page. Cùng link luôn ra cùng màn.}
+    \kp{\textbf{Page-backed} deep link được; \textbf{pageless} (\texttt{push}, dialog) thì không.}
+  \end{column}
+  \begin{column}{0.47\textwidth}
+    \centering
+    \begin{tikzpicture}[x=1cm,y=1cm,node distance=0.32cm]
+      \node[box,minimum width=3.6cm,fill=boxyellow] (os) {Hệ điều hành / trình duyệt (URL, deep link)};
+      \node[box,minimum width=3.6cm,below=of os] (p) {RouteInformationProvider};
+      \node[box,minimum width=3.6cm,below=of p] (q) {RouteInformationParser\\\textit{URL → cấu hình}};
+      \node[box,minimum width=3.6cm,below=of q] (d) {RouterDelegate\\\textit{cấu hình → danh sách Page}};
+      \node[box,minimum width=3.6cm,below=of d,fill=boxgreen] (n) {Navigator(pages: [...])};
+      \draw[arr] (os) -- (p); \draw[arr] (p) -- (q); \draw[arr] (q) -- (d); \draw[arr] (d) -- (n);
+      \draw[arr,dashed] (n.east) -- ++(0.35,0) |- node[lbl,right,pos=0.25]{cập nhật\\URL} (os.east);
+    \end{tikzpicture}
+    \par\vspace{3pt}
+    \figcap{Luồng dữ liệu của Router; go\_router đã hiện thực sẵn các lớp này}
+  \end{column}
+  \end{columns}
+  \source{docs.flutter.dev/ui/navigation · medium.com/flutter/learning-flutters-new-navigation-and-routing-system-7c9068155ade}
+\end{frame}
+
+% =====================================================================
+% 7. go_router
+% =====================================================================
+\begin{frame}{go\_router: khai báo route theo đường dẫn}
+  \begin{columns}[T,onlytextwidth]
+  \begin{column}{0.53\textwidth}\bodyL
+    \vspace{0.35cm}
+    \kp{Router khai báo của flutter.dev, xây trên Router API.}
+    \kp{\textbf{Route con:} mở thẳng \texttt{/food/pho} vẫn có Thực đơn bên dưới.}
+    \kp{\texttt{:id} lấy từ URL; \texttt{extra} không nằm trong URL.}
+  \end{column}
+  \begin{column}{0.44\textwidth}
+    \centering
+    \vspace{0.15cm}
+    \begin{tikzpicture}[x=1cm,y=1cm]
+      \node[box,minimum width=2.2cm,fill=boxyellow] (r) at (0,0) {GoRoute \texttt{/}\\name: menu};
+      \node[box,minimum width=2.0cm] (f) at (-1.25,-1.35) {GoRoute \texttt{food/:id}\\name: food};
+      \node[box,minimum width=2.0cm] (c) at (1.25,-1.35) {GoRoute \texttt{cart}\\name: cart};
+      \draw[arr] (r.south) -- ++(0,-0.3) -| (f.north);
+      \draw[arr] (r.south) -- ++(0,-0.3) -| (c.north);
+      \node[box,minimum width=2.6cm,fill=boxred] (e) at (0,-2.7) {errorBuilder → NotFoundScreen};
+      \node[lbl] at (-1.25,-2.0) {\texttt{/food/pho}};
+      \node[lbl] at (1.25,-2.0) {\texttt{/cart}};
+      \node[lbl] at (0,-3.15) {URL không khớp, ví dụ \texttt{/xyz}};
+    \end{tikzpicture}
+    \par\vspace{4pt}
+    \figcap{Cây route của app Gọi món mini (lib/router.dart)}
+  \end{column}
+  \end{columns}
+  \source{pub.dev/packages/go\_router · pub.dev/documentation/go\_router/latest/topics/Configuration-topic.html}
+\end{frame}
+
+% =====================================================================
+% 8. go vs push
+% =====================================================================
+\begin{frame}{go và push: thay ngăn xếp hay chồng thêm màn}
+  \begin{columns}[T,onlytextwidth]
+  \begin{column}{0.50\textwidth}\bodyL
+    \vspace{0.35cm}
+    \kp{\textbf{go:} dựng lại ngăn xếp theo cây route.}
+    \kp{\textbf{push:} chồng màn lên đỉnh, chờ được kết quả.}
+    \kp{Dùng \textbf{go} cho deep link, \textbf{push} khi cần quay lại đúng màn trước.}
+  \end{column}
+  \begin{column}{0.47\textwidth}
+    \centering
+    \begin{tikzpicture}[x=1cm,y=1cm]
+      \tikzset{st/.style={draw=navy,fill=boxblue,minimum width=1.75cm,minimum height=0.42cm,
+        font=\fontsize{5.4}{6.4}\selectfont}}
+      \node[lbl,font=\fontsize{5.8}{7}\selectfont\bfseries] at (0,2.2) {Đang ở \texttt{/cart}};
+      \node[st] at (0,0) {\texttt{/}};
+      \node[st,fill=boxyellow] at (0,0.45) {\texttt{/cart}};
+      \node[lbl,font=\fontsize{5.8}{7}\selectfont\bfseries] at (2.1,2.2) {push \texttt{/food/pho}};
+      \node[st] at (2.1,0) {\texttt{/}};
+      \node[st] at (2.1,0.45) {\texttt{/cart}};
+      \node[st,fill=boxgreen] at (2.1,0.9) {\texttt{/food/pho}};
+      \node[lbl,font=\fontsize{5.8}{7}\selectfont\bfseries] at (4.2,2.2) {go \texttt{/food/pho}};
+      \node[st] at (4.2,0) {\texttt{/}};
+      \node[st,fill=boxgreen] at (4.2,0.45) {\texttt{/food/pho}};
+      \node[lbl,text width=1.7cm] at (2.1,-0.6) {Back → \texttt{/cart}};
+      \node[lbl,text width=1.7cm] at (4.2,-0.6) {Back → \texttt{/}};
+      \draw[navy!40,dashed] (1.05,-0.9) -- (1.05,2.4);
+      \draw[navy!40,dashed] (3.15,-0.9) -- (3.15,2.4);
+    \end{tikzpicture}
+    \par\vspace{6pt}
+    \figcap{push chồng thêm; go dựng ngăn xếp theo cây route}
+  \end{column}
+  \end{columns}
+  \source{viblo.asia/p/flutter-dieu-huong-voi-gorouter-su-khac-nhau-giua-go-va-push-y37Ld1GmVov · pub.dev/documentation/go\_router/latest/topics/Navigation-topic.html}
+\end{frame}
+
+% =====================================================================
+% 9. PopScope
+% =====================================================================
+\begin{frame}{Kiểm soát nút Back với PopScope}
+  \begin{columns}[T,onlytextwidth]
+  \begin{column}{0.52\textwidth}\bodyL
+    \vspace{0.35cm}
+    \kp{Thay \texttt{WillPopScope}, hỗ trợ \textbf{predictive back} trên Android.}
+    \kp{\textbf{canPop: false} chặn nút Back.}
+    \kp{\textbf{didPop = false} → app tự hỏi xác nhận rồi mới pop.}
+  \end{column}
+  \begin{column}{0.45\textwidth}
+    \centering
+    \begin{tikzpicture}[x=1cm,y=1cm,node distance=0.3cm]
+      \node[box,fill=boxyellow,minimum width=2.4cm] (b) {Người dùng bấm Back};
+      \node[box,diamond,aspect=2.2,inner sep=1pt,below=of b] (c) {canPop?};
+      \node[box,fill=boxgreen,minimum width=1.5cm] (y) at ($(c)+(-1.6,-1.15)$) {pop ngay\\didPop = true};
+      \node[box,minimum width=2.1cm] (n) at ($(c)+(1.3,-1.15)$) {onPopInvoked…\\didPop = false};
+      \node[box,minimum width=2.1cm,below=of n] (d) {showDialog\\xác nhận?};
+      \node[box,fill=boxgreen,minimum width=2.1cm,below=of d] (p) {setState(allowPop)\\→ context.pop()};
+      \draw[arr] (b) -- (c);
+      \draw[arr] (c.west) -| node[lbl,above,pos=0.25]{true} (y.north);
+      \draw[arr] (c.east) -| node[lbl,above,pos=0.25]{false} (n.north);
+      \draw[arr] (n) -- (d);
+      \draw[arr] (d) -- node[lbl,right]{có} (p);
+      \draw[arr] (d.west) -- ++(-0.4,0) node[lbl,left,xshift=-1pt]{không → ở lại};
+    \end{tikzpicture}
+    \par\vspace{3pt}
+    \figcap{Luồng xử lý Back khi dùng PopScope}
+  \end{column}
+  \end{columns}
+  \source{api.flutter.dev/flutter/widgets/PopScope-class.html · docs.flutter.dev/release/breaking-changes/android-predictive-back}
+\end{frame}
+
+% =====================================================================
+% 10. Dialog & state
+% =====================================================================
+\begin{frame}{Dialog là route; state dùng chung giữa các màn}
+  \begin{columns}[T,onlytextwidth]
+  \begin{column}{0.53\textwidth}\bodyL
+    \vspace{0.35cm}
+    \kp{\textbf{showDialog} cũng là route, trả kết quả qua \texttt{pop(ctx, value)}.}
+    \kp{\textbf{SnackBar} vẫn hiện sau khi chuyển màn.}
+    \kp{\textbf{State dùng chung} đặt trong \texttt{ChangeNotifier} ở cấp app.}
+  \end{column}
+  \begin{column}{0.44\textwidth}
+    \centering
+    \vspace{0.1cm}
+    \begin{tikzpicture}[x=1cm,y=1cm]
+      \node[box,fill=boxyellow,minimum width=2.4cm,minimum height=0.6cm] (c) at (0,0) {CartController\\\textit{ChangeNotifier}};
+      \node[box,minimum width=1.4cm] (m) at (-1.7,-1.4) {Thực đơn};
+      \node[box,minimum width=1.4cm] (g) at (1.7,-1.4) {Giỏ hàng};
+      \node[box,fill=boxgreen,minimum width=1.4cm] (d) at (0,1.35) {GoRouter};
+      \draw[arr] (d) -- node[lbl,right]{tạo 1 lần} (c);
+      \draw[arr] (c) -- node[lbl,above left]{notify} (m);
+      \draw[arr] (g) -- node[lbl,above right]{clear()} (c);
+      \draw[arr,dashed] (m) -- node[lbl,below]{push(extra: cart)} (g);
+    \end{tikzpicture}
+    \par\vspace{6pt}
+    \figcap{Giỏ hàng ở cấp app, các màn đọc và cập nhật qua controller}
+  \end{column}
+  \end{columns}
+  \source{api.flutter.dev/flutter/material/showDialog.html · docs.flutter.dev/data-and-backend/state-mgmt/simple}
+\end{frame}
+
+% =====================================================================
+% 11. So sánh
+% =====================================================================
+\begin{frame}{So sánh Navigator 1.0 và Router API (go\_router)}
+  \vspace{0.4cm}
+  \fontsize{8.6}{10.6}\selectfont
+  \renewcommand{\arraystretch}{1.9}
+  \setlength{\tabcolsep}{7pt}
+  \rowcolors{2}{rowalt}{white}
+  \begin{tabularx}{\linewidth}{>{\bfseries}p{3.0cm} X X}
+    \rowcolor{navy}
+    \color{white}Tiêu chí & \color{white}\bfseries Navigator 1.0 & \color{white}\bfseries go\_router\\
+    Kiểu điều hướng & Mệnh lệnh: \texttt{push}, \texttt{pop} & Khai báo theo URL: \texttt{go}, \texttt{push}\\
+    Deep link & Không tùy biến được & Cùng URL → cùng màn\\
+    Web Back / Forward & Hạn chế & Có (History API)\\
+    Phù hợp & Màn tạm, dialog & Màn chính, cần URL\\
+  \end{tabularx}
+  \source{docs.flutter.dev/ui/navigation · pub.dev/packages/go\_router}
+\end{frame}
+
+% =====================================================================
+% 12. App Gọi món mini
+% =====================================================================
+\setsec{Ứng dụng Gọi món mini}
+\begin{frame}{App Gọi món mini}
+  \vspace{0.3cm}
+  \carlito\fontsize{9}{11}\selectfont
+  \renewcommand{\arraystretch}{1.75}
+  \setlength{\tabcolsep}{6pt}
+  \rowcolors{2}{rowalt}{white}
+  \begin{tabularx}{\linewidth}{>{\leavevmode\bfseries\color{navy}}X|>{\leavevmode}X}
+    \rowcolor{navy}
+    \color{white}Chức năng trong app & \color{white}\bfseries Kiến thức minh họa\\
+    Thực đơn → Chi tiết, trả số lượng & \texttt{pushNamed}, \texttt{extra}, \texttt{pop(qty)}\\
+    Hỏi lại khi rời màn Chi tiết & \texttt{PopScope}, \texttt{AlertDialog}\\
+    Giỏ hàng, xác nhận đặt hàng & \texttt{showDialog}, \texttt{pop(true)}\\
+    Nhập \texttt{/food/pho}, \texttt{/xyz} & \texttt{context.go}, \texttt{errorBuilder}\\
+    Màn Giới thiệu & \texttt{Navigator.push}\\
+    Giỏ giữ nguyên khi chuyển màn & \texttt{CartController}\\
+  \end{tabularx}
+\end{frame}
+
+% =====================================================================
+% 13. Luồng màn hình
+% =====================================================================
+\begin{frame}{Luồng màn hình của ứng dụng}
+  \centering
+  \vspace{0.25cm}
+  \begin{tikzpicture}[x=1cm,y=1cm]
+    \tikzset{scr/.style={box,minimum width=2.35cm,minimum height=0.8cm,font=\fontsize{6.2}{7.4}\selectfont},
+             dl/.style={box,fill=white,minimum width=2.0cm,font=\fontsize{5.4}{6.4}\selectfont}}
+    \node[scr,fill=boxyellow,minimum height=3.6cm] (menu) at (0,0) {\textbf{Thực đơn}\\\texttt{/}};
+    \node[scr] (detail) at (4.3,1.4) {\textbf{Chi tiết món}\\\texttt{/food/:id}};
+    \node[scr] (cart) at (4.3,0) {\textbf{Giỏ hàng}\\\texttt{/cart}};
+    \node[scr,fill=boxgreen] (about) at (4.3,-1.4) {\textbf{Giới thiệu}\\\textit{Navigator.push}};
+    \node[scr] (view) at (-4.3,0.8) {\textbf{Chi tiết (chỉ xem)}\\\texttt{/food/pho}};
+    \node[scr,fill=boxred] (nf) at (-4.3,-0.8) {\textbf{Không tìm thấy}\\\texttt{/xyz}};
+    \node[dl] (dlg1) at (7.75,1.4) {Dialog\\“Bỏ chọn món?”};
+    \node[dl] (dlg2) at (7.75,0) {Dialog\\“Xác nhận đặt hàng?”};
+    \draw[arr] ($(menu.east)+(0,1.55)$) -- node[lbl,above]{pushNamed('food')} ($(detail.west)+(0,0.15)$);
+    \draw[arr] ($(detail.west)+(0,-0.15)$) -- node[lbl,below]{pop(qty)} ($(menu.east)+(0,1.25)$);
+    \draw[arr] ($(menu.east)+(0,0.15)$) -- node[lbl,above]{pushNamed('cart')} ($(cart.west)+(0,0.15)$);
+    \draw[arr] ($(cart.west)+(0,-0.15)$) -- node[lbl,below]{pop(true)} ($(menu.east)+(0,-0.15)$);
+    \draw[arr] ($(menu.east)+(0,-1.25)$) -- node[lbl,above]{Navigator.push} ($(about.west)+(0,0.15)$);
+    \draw[arr] ($(about.west)+(0,-0.15)$) -- node[lbl,below]{pop('Đã đóng…')} ($(menu.east)+(0,-1.55)$);
+    \draw[arr] ($(menu.west)+(0,0.8)$) -- node[lbl,above]{context.go} (view.east);
+    \draw[arr] ($(menu.west)+(0,-0.8)$) -- node[lbl,above]{go → errorBuilder} (nf.east);
+    \draw[arr,dashed] (detail) -- node[lbl,above]{Back} (dlg1);
+    \draw[arr,dashed] (cart) -- node[lbl,above]{Đặt hàng} (dlg2);
+    \draw[arr,dashed] (menu.south) -- ++(0,-0.4) node[lbl,below]{Back 2 lần trong 2 giây → thoát app};
+  \end{tikzpicture}
+  \par\vspace{8pt}
+  \figcap{Nét liền: điều hướng giữa các màn. Nét đứt: dialog và thao tác Back}
+\end{frame}
+
+% =====================================================================
+% 14. GoRouter config
+% =====================================================================
+\begin{frame}[fragile]{Cấu hình GoRouter}
+  \begin{columns}[T,onlytextwidth]
+  \begin{column}{0.60\textwidth}
+    \codelabel{Hàm createRouter (lib/router.dart)}
+\begin{codebox}
+\begin{Verbatim}[formatcom=\codefontS]
+return GoRouter(
+  initialLocation: '/',
+  errorBuilder: (context, state) =>
+      NotFoundScreen(location: state.uri.toString()),
+  routes: [
+    GoRoute(
+      path: '/',
+      name: 'menu',
+      builder: (context, state) => MenuScreen(...),
+      routes: [
+        GoRoute(
+          path: 'food/:id',
+          name: 'food',
+          builder: (context, state) {
+            final extra = state.extra;
+            final args = extra is FoodRouteArgs ? extra : null;
+            return DetailScreen(
+              id: state.pathParameters['id']!,
+              viewOnly: !(args?.selectable ?? false), ...);
+          },
+        ),
+        GoRoute(path: 'cart', name: 'cart', ...),
+      ],
+    ),
+  ],
+);
+\end{Verbatim}
+\end{codebox}
+  \end{column}
+  \begin{column}{0.37\textwidth}\bodyL
+    \vspace{0.35cm}
+    \kp{\textbf{Route con} → Back luôn về Thực đơn.}
+    \kp{\textbf{pathParameters} lấy \texttt{id} từ URL.}
+    \kp{\textbf{errorBuilder} xử lý URL lạ.}
+  \end{column}
+  \end{columns}
+\end{frame}
+
+% =====================================================================
+% 15. pushNamed + kết quả
+% =====================================================================
+\begin{frame}[fragile]{Mở chi tiết món và nhận kết quả trả về}
+  \begin{columns}[T,onlytextwidth]
+  \begin{column}{0.60\textwidth}
+    \codelabel{Hàm \_openFood trong MenuScreen}
+\begin{codebox}
+\begin{Verbatim}[formatcom=\codefont]
+final qty = await context.pushNamed<int>(
+  'food',
+  pathParameters: {'id': food.id},
+  extra: FoodRouteArgs(
+    selectable: true,
+    currentQuantity: cart.quantityOf(food.id),
+  ),
+);
+if (!mounted || qty == null) return;
+widget.cartController.add(food, qty);
+\end{Verbatim}
+\end{codebox}
+    \codelabel{Nút “Thêm vào giỏ” trong DetailScreen}
+\begin{codebox}
+\begin{Verbatim}[formatcom=\codefont]
+: () {
+    setState(() => _allowPop = true);
+    context.pop(_qty);
+  },
+\end{Verbatim}
+\end{codebox}
+  \end{column}
+  \begin{column}{0.37\textwidth}\bodyL
+    \vspace{0.35cm}
+    \kp{\textbf{pushNamed<int>}: mở màn, chờ số lượng.}
+    \kp{\textbf{extra}: truyền tham số có kiểu.}
+    \kp{\textbf{pop(\_qty)}: trả kết quả về Thực đơn.}
+  \end{column}
+  \end{columns}
+\end{frame}
+
+% =====================================================================
+% 16. PopScope trong DetailScreen
+% =====================================================================
+\begin{frame}[fragile]{PopScope: xác nhận trước khi rời màn chi tiết}
+  \begin{columns}[T,onlytextwidth]
+  \begin{column}{0.60\textwidth}
+    \codelabel{Bọc Scaffold của DetailScreen}
+\begin{codebox}
+\begin{Verbatim}[formatcom=\codefont]
+return PopScope<int>(
+  canPop: _qty == Cart.minQuantity || _allowPop,
+  onPopInvokedWithResult: _onPopInvoked,
+  child: Scaffold(...),
+);
+\end{Verbatim}
+\end{codebox}
+    \codelabel{Hàm \_onPopInvoked}
+\begin{codebox}
+\begin{Verbatim}[formatcom=\codefontS]
+Future<void> _onPopInvoked(bool didPop, int? result) async {
+  if (didPop) return;
+  final leave = await showDialog<bool>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: const Text('Bỏ chọn món?'),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(ctx, false), ...),
+        TextButton(onPressed: () => Navigator.pop(ctx, true), ...),
+      ],
+    ),
+  );
+  if (leave == true && mounted) {
+    setState(() => _allowPop = true);
+    context.pop();
+  }
+}
+\end{Verbatim}
+\end{codebox}
+  \end{column}
+  \begin{column}{0.37\textwidth}\bodyL
+    \vspace{0.35cm}
+    \kp{\textbf{canPop}: chỉ cho Back khi chưa đổi số lượng.}
+    \kp{\textbf{didPop = false}: mở dialog hỏi lại.}
+    \kp{\textbf{\_allowPop}: bật cờ rồi mới pop.}
+  \end{column}
+  \end{columns}
+\end{frame}
+
+% =====================================================================
+% 17. Giỏ hàng
+% =====================================================================
+\begin{frame}[fragile]{Giỏ hàng: dialog đặt hàng và state cấp app}
+  \begin{columns}[T,onlytextwidth]
+  \begin{column}{0.60\textwidth}
+    \codelabel{CartController (lib/state/cart\_controller.dart)}
+\begin{codebox}
+\begin{Verbatim}[formatcom=\codefontS]
+class CartController extends ChangeNotifier {
+  Cart _cart;
+
+  void add(Food food, int quantity) {
+    _cart = _cart.add(food, quantity);
+    notifyListeners();
+  }
+}
+\end{Verbatim}
+\end{codebox}
+    \codelabel{Hàm \_order trong CartScreen}
+\begin{codebox}
+\begin{Verbatim}[formatcom=\codefontS]
+final ok = await showDialog<bool>(
+  context: context,
+  builder: (ctx) => AlertDialog(
+    title: const Text('Xác nhận đặt hàng?'), ...),
+);
+if (ok != true || !context.mounted) return;
+cartController?.clear();
+ScaffoldMessenger.of(context).showSnackBar(...);
+if (context.canPop()) {
+  context.pop(true);
+} else {
+  context.goNamed('menu');
+}
+\end{Verbatim}
+\end{codebox}
+  \end{column}
+  \begin{column}{0.37\textwidth}\bodyL
+    \vspace{0.35cm}
+    \kp{\textbf{ChangeNotifier}: giỏ sống ngoài route.}
+    \kp{\textbf{pop(true)} nếu có màn trước, nếu không thì \textbf{goNamed}.}
+    \kp{\textbf{SnackBar} báo đặt hàng thành công.}
+  \end{column}
+  \end{columns}
+\end{frame}
+
+% =====================================================================
+% 18. Router API demo
+% =====================================================================
+\begin{frame}[fragile]{Demo Router API: context.go và trang lỗi}
+  \begin{columns}[T,onlytextwidth]
+  \begin{column}{0.60\textwidth}
+    \codelabel{Hàm \_goToPath trong MenuScreen}
+\begin{codebox}
+\begin{Verbatim}[formatcom=\codefont]
+void _goToPath() {
+  final path = _pathController.text.trim();
+  String? error;
+  if (path.isEmpty) {
+    error = 'Vui lòng nhập đường dẫn';
+  } else if (!path.startsWith('/')) {
+    error = 'Đường dẫn phải bắt đầu bằng `/`';
+  } else if (...) {
+    error = 'Chỉ nhập đường dẫn nội bộ của app';
+  }
+  if (error != null) {
+    setState(() => _pathError = error);
+    return;
+  }
+  context.go(path);
+}
+\end{Verbatim}
+\end{codebox}
+    \codelabel{Nút trong NotFoundScreen}
+\begin{codebox}
+\begin{Verbatim}[formatcom=\codefont]
+onPressed: () =>
+    context.canPop() ? context.pop() : context.goNamed('menu'),
+\end{Verbatim}
+\end{codebox}
+  \end{column}
+  \begin{column}{0.37\textwidth}\bodyL
+    \vspace{0.35cm}
+    \kp{\textbf{Kiểm tra} đường dẫn ngay tại ô nhập.}
+    \kp{\textbf{context.go}: \texttt{/food/pho} → màn chỉ xem.}
+    \kp{\texttt{/xyz} → \textbf{errorBuilder}.}
+  \end{column}
+  \end{columns}
+\end{frame}
+
+% =====================================================================
+% 19. Navigator 1.0 & Back hai lần
+% =====================================================================
+\begin{frame}[fragile]{Navigator 1.0 và Back hai lần để thoát}
+  \begin{columns}[T,onlytextwidth]
+  \begin{column}{0.60\textwidth}
+    \codelabel{Mở màn Giới thiệu (MenuScreen.\_openAbout)}
+\begin{codebox}
+\begin{Verbatim}[formatcom=\codefont]
+final message = await Navigator.of(context).push<String>(
+  MaterialPageRoute(builder: (_) => const AboutScreen()),
+);
+if (!mounted) return;
+// hiện message bằng SnackBar
+\end{Verbatim}
+\end{codebox}
+    \codelabel{Nút “Đã hiểu” trong AboutScreen}
+\begin{codebox}
+\begin{Verbatim}[formatcom=\codefont]
+onPressed: () => Navigator.pop(context, 'Đã đóng màn Giới thiệu'),
+\end{Verbatim}
+\end{codebox}
+    \codelabel{Back ở màn gốc (MenuScreen.\_onRootPop)}
+\begin{codebox}
+\begin{Verbatim}[formatcom=\codefont]
+void _onRootPop(bool didPop, Object? result) {
+  if (didPop) return;
+  final now = DateTime.now();
+  final last = _lastBackPressed;
+  if (last == null || now.difference(last) > const Duration(seconds: 2)) {
+    _lastBackPressed = now;
+    // SnackBar: 'Nhấn Back lần nữa để thoát'
+    return;
+  }
+  SystemNavigator.pop();
+}
+\end{Verbatim}
+\end{codebox}
+  \end{column}
+  \begin{column}{0.37\textwidth}\bodyL
+    \vspace{0.35cm}
+    \kp{\textbf{Navigator.push}: màn không có URL.}
+    \kp{\textbf{pop(context, chuỗi)}: trả thông điệp về.}
+    \kp{\textbf{Back 2 lần} trong 2 giây mới thoát app.}
+  \end{column}
+  \end{columns}
+\end{frame}
+
+% =====================================================================
+% 20. Demo sản phẩm
+% =====================================================================
+\begin{frame}{Demo sản phẩm: App Gọi món mini}
+  \vspace{-0.15cm}
+  \centering
+  \shot{image1.jpeg}{Thực đơn và Demo Router API}\hfill
+  \shot{image2.jpeg}{Chi tiết món (/food/banh-mi)}\hfill
+  \shot{image3.jpeg}{Giỏ hàng (/cart)}
+\end{frame}
+
+% =====================================================================
+% 21. Kết luận
+% =====================================================================
+\setsec{Kết luận}
+\begin{frame}{Kết luận \& tài liệu tham khảo}
+  \vspace{0.3cm}
+  \bodyL
+  \kp{\textbf{go\_router} cho màn chính; \textbf{Navigator.push} và dialog cho màn tạm.}
+  \kp{\textbf{Dữ liệu}: tham số URL, \texttt{extra}, \texttt{pop(result)}.}
+  \kp{\textbf{PopScope} và \textbf{state cấp app} giữ luồng màn hình an toàn.}
+  \vspace{2pt}
+  {\fontsize{8}{10}\selectfont\textbf{Tài liệu tham khảo}\par}
+  \vspace{3pt}
+  {\fontsize{6.8}{9.2}\selectfont\color{captiongray}
+  docs.flutter.dev — Navigation and routing; Cookbook navigation; Android predictive back\par
+  api.flutter.dev — Navigator, PopScope, showDialog\par
+  pub.dev/packages/go\_router\par
+  Medium (Flutter) — Learning Flutter's new navigation and routing system\par
+  Viblo — Điều hướng với GoRouter: sự khác nhau giữa Go và Push\par}
+\end{frame}
+
+% =====================================================================
+% 22. Cảm ơn
+% =====================================================================
+{
+\setbeamertemplate{background}{\coverbackground}
+\begin{frame}[plain]
+  \begin{tikzpicture}[remember picture,overlay,x=\paperwidth,y=-\paperheight,
+                      shift={(current page.north west)}]
+    \node[anchor=west,text=gold,font=\carlito\fontsize{17}{20}\selectfont\bfseries]
+      at (0.060,0.375) {CẢM ƠN THẦY VÀ CÁC BẠN};
+    \node[anchor=west,text=white,font=\carlito\fontsize{11}{13}\selectfont]
+      at (0.060,0.505) {Xin mời đặt câu hỏi – Q\&A};
+    \node[anchor=west,text=white,font=\carlito\fontsize{8.5}{10}\selectfont]
+      at (0.060,0.773) {Trần Đăng Duy • Phan Văn Trà};
+  \end{tikzpicture}
+\end{frame}
+}
+
+\end{document}
