@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 class CurrentUrlBar extends StatelessWidget implements PreferredSizeWidget {
-  // url: chỉ truyền ở màn lỗi, vì errorBuilder không có GoRouterState để đọc.
+  // url: truyền ở màn ngoài go_router (errorBuilder, Navigator.push) vì
+  // không có GoRouterState để đọc.
   const CurrentUrlBar({super.key, this.url});
 
   final String? url;
@@ -23,6 +24,8 @@ class CurrentUrlBar extends StatelessWidget implements PreferredSizeWidget {
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Text(
             text,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: Theme.of(context)
                 .textTheme
                 .labelSmall

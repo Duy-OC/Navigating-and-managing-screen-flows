@@ -2,10 +2,19 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:food_nav_demo/data/foods.dart';
 import 'package:food_nav_demo/models/cart.dart';
 import 'package:food_nav_demo/models/cart_item.dart';
+import 'package:food_nav_demo/models/food.dart';
+import 'package:food_nav_demo/state/cart_controller.dart';
 
 void main() {
-  final banhMi = findFoodById('banh-mi')!;
-  final pho = findFoodById('pho')!;
+  TestWidgetsFlutterBinding.ensureInitialized();
+  late Food banhMi;
+  late Food pho;
+
+  setUpAll(() async {
+    final foods = await loadFoods();
+    banhMi = findFoodById(foods, 'banh-mi')!;
+    pho = findFoodById(foods, 'pho')!;
+  });
 
   test('giỏ rỗng', () {
     const cart = Cart();
@@ -36,6 +45,30 @@ void main() {
   test('số lượng ngoài khoảng 1..10 ném ArgumentError', () {
     expect(() => const Cart().add(banhMi, 0), throwsArgumentError);
     expect(() => const Cart().add(banhMi, 11), throwsArgumentError);
+  });
+
+  test('canAdd chặn tổng số lượng mỗi món vượt quá 10', () {
+    final cart = const Cart().add(banhMi, 9);
+    expect(cart.canAdd('banh-mi', 1), isTrue);
+    expect(cart.canAdd('banh-mi', 2), isFalse);
+    expect(cart.canAdd('pho', 10), isTrue);
+    expect(() => cart.add(banhMi, 2), throwsArgumentError);
+  });
+
+  test('CartController giữ state và thông báo thay đổi', () {
+    final controller = CartController();
+    var notifications = 0;
+    controller.addListener(() => notifications++);
+
+    controller.add(banhMi, 2);
+    expect(controller.cart.totalQuantity, 2);
+    expect(controller.canAdd('banh-mi', 8), isTrue);
+    expect(controller.canAdd('banh-mi', 9), isFalse);
+    expect(notifications, 1);
+
+    controller.clear();
+    expect(controller.cart.isEmpty, isTrue);
+    expect(notifications, 2);
   });
 
   test('Cart bất biến', () {

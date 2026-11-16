@@ -15,11 +15,21 @@ class Cart {
 
   int get totalPrice => items.fold(0, (sum, item) => sum + item.total);
 
+  /// Có thể thêm [quantity] phần nữa mà không vượt giới hạn mỗi món hay không.
+  bool canAdd(String foodId, int quantity) {
+    if (quantity < minQuantity || quantity > maxQuantity) return false;
+    return quantityOf(foodId) + quantity <= maxQuantity;
+  }
+
   /// Thêm món; cộng dồn nếu đã có (giữ nguyên vị trí), ngược lại thêm vào cuối.
   Cart add(Food food, int quantity) {
-    if (quantity < minQuantity || quantity > maxQuantity) {
+    if (!canAdd(food.id, quantity)) {
       throw ArgumentError.value(
-          quantity, 'quantity', 'phải nằm trong [$minQuantity, $maxQuantity]');
+        quantity,
+        'quantity',
+        'phải nằm trong [$minQuantity, $maxQuantity] và tổng mỗi món '
+            'không vượt quá $maxQuantity',
+      );
     }
     final newList = List<CartItem>.of(items);
     final index = newList.indexWhere((item) => item.food.id == food.id);

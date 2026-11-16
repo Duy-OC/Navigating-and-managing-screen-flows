@@ -1,87 +1,57 @@
-# Gọi món mini – Demo điều hướng Flutter (Navigator + Router API)
+# Gọi món mini – Chủ đề 9: Điều hướng và quản lý luồng màn hình
 
-> Lưu ý: project Flutter (package `food_nav_demo`) nằm ngay ở thư mục gốc của repo này, không phải trong thư mục con `food_nav_demo`.
+Project Flutter `food_nav_demo` nằm ngay tại thư mục gốc. App có bốn màn hình chính: Thực đơn, Chi tiết món, Giỏ hàng, Giới thiệu; thêm màn báo lỗi đường dẫn. Dữ liệu món nằm trong `assets/data/foods.csv`, ảnh ở `assets/images/`. Giỏ hàng chỉ giữ trong bộ nhớ khi app đang chạy, nhưng được quản lý ở cấp ứng dụng nên không mất khi điều hướng.
 
-## 1. Giới thiệu
-
-Ứng dụng gọi món gồm 3 màn hình (Thực đơn, Chi tiết món, Giỏ hàng) và một màn lỗi. Dữ liệu món ăn là dữ liệu mẫu viết cứng trong bộ nhớ, giỏ hàng chỉ nằm trong `State`, tắt app là mất. Mục tiêu của bài là minh họa điều hướng bằng `go_router` (Router API), không phải làm app bán hàng hoàn chỉnh. Các chỗ liên quan đến điều hướng trong code đều có comment bắt đầu bằng `// [NAV]`.
-
-## 2. Cách chạy
+## Chạy và kiểm tra
 
 ```bash
-flutter create . --platforms android --project-name food_nav_demo   # lần đầu: sinh thư mục android/ (không ghi đè lib/)
-rm -f test/widget_test.dart   # xóa test mẫu do flutter create sinh ra
 flutter pub get
-flutter run        # Android emulator
+flutter run
 flutter analyze
 flutter test
 ```
 
-## 3. Đối chiếu yêu cầu đề bài và code
+Thư mục `android/` đã có sẵn. Có thể chạy trên Android emulator hoặc thiết bị thật đã bật USB debugging.
 
-| Yêu cầu | Trong code |
+## Đối chiếu yêu cầu Chủ đề 9
+
+| Nội dung | Minh họa trong app |
 |---|---|
-| Navigator, route, truyền tham số | `push('/food/:id')` + `pathParameters`; `pushNamed('cart', extra:)`; `pop(result)`; `Navigator.pop` trong dialog |
-| Named routes | `name: 'menu' / 'food' / 'cart'`, `context.pushNamed('cart')` |
-| Router API khi luồng phức tạp | `MaterialApp.router`, `GoRouter`, route con, `go` vs `push`, `errorBuilder`, mở thẳng URL |
-| Quay lại, trạng thái điều hướng | `PopScope` ở Chi tiết; Back sau khi mở bằng `go`; `extra` mất khi mở thẳng `/cart` |
-| Điều hướng và trải nghiệm người dùng | Dialog xác nhận trước khi bỏ món/đặt hàng, SnackBar phản hồi, nút giỏ tắt khi trống, URL hiển thị dưới AppBar |
+| Navigator, route, truyền tham số | Thực đơn dùng `pushNamed<int>('food', pathParameters: {'id': ...}, extra: FoodRouteArgs(...))`; Chi tiết đọc `id` từ `pathParameters`, trả số lượng bằng `context.pop(quantity)`; màn Giới thiệu dùng `Navigator.push(MaterialPageRoute)` và `Navigator.pop(result)`; dialog dùng `Navigator.pop` |
+| Named routes | `GoRoute(name: 'menu')`, `'food'` và `'cart'`; gọi bằng `context.pushNamed` với `pathParameters`/`extra` hoặc `context.goNamed('menu')`; đây là API của **go_router**, không phải `Navigator.pushNamed()` của Navigator 1.0 |
+| Router API | `MaterialApp.router`, `GoRouter`, route con, `errorBuilder`, `go()` và `push()` trong `lib/router.dart`; `extra` có kiểu `FoodRouteArgs`/`Cart` |
+| Back và trạng thái | `PopScope` hỏi trước khi bỏ số lượng đã đổi; Back ở Thực đơn nhấn hai lần mới thoát; `CartController` giữ giỏ ở cấp app; `pop(qty)`/`pop(true)`; Back từ Giỏ hàng giữ nguyên giỏ |
+| Trải nghiệm người dùng | SnackBar phản hồi, badge số món, trạng thái giỏ trống, thông báo CSV lỗi, màn lỗi URL; mỗi món tối đa 10 phần |
 
-Cấu hình route nằm trong `lib/router.dart`, các màn hình trong `lib/screens/`.
+`push()` thêm màn lên stack và có thể chờ kết quả từ `pop(result)`. `pushNamed` vừa dùng named route vừa truyền `pathParameters` và object `FoodRouteArgs` qua `extra`. `go()` chuyển tới vị trí route mới; không có lời gọi `await` để nhận kết quả. `CartController` được tạo một lần trong `createRouter` và truyền cho Thực đơn/Giỏ hàng, nên giỏ không mất khi route bị dựng lại (ví dụ mở `/xyz` rồi quay về). Mở trực tiếp `/cart` không có `extra` sẽ dùng giỏ hiện tại trong bộ nhớ; nếu giỏ trống thì hiện trạng thái trống. Mỗi món tối đa 10 phần; Chi tiết hiển thị số đã có trong giỏ và khóa nút thêm khi đủ.
 
-Logic nghiệp vụ (cộng dồn giỏ, tổng tiền, giới hạn số lượng) nằm trong `lib/models/cart.dart` (đối tượng `Cart` bất biến, truyền qua `extra`), có unit test ở `test/cart_test.dart` và `test/format_test.dart`. Các màn hình chỉ hiển thị và điều hướng.
+Trong phần **Demo Router API**, nhập đường dẫn nội bộ (gợi ý `/food/pho`) rồi bấm **Đi** hoặc Enter. Ô nhập bỏ khoảng trắng hai đầu, báo lỗi dưới ô khi trống hoặc thiếu dấu `/` đầu và chặn URL ngoài app. Đường dẫn hợp lệ được mở bằng `go(path)`: `/food/pho` và `/food/banh-mi` mở Chi tiết ở chế độ chỉ xem, `/food/pizza` báo không tìm thấy món, `/xyz` mở màn **Không tìm thấy trang**. Nút **Về thực đơn** và Back từ chi tiết món hợp lệ đưa về Thực đơn. Chọn món từ danh sách vẫn dùng `pushNamed<int>()` để chọn số lượng và trả kết quả khi thêm vào giỏ. Nút **Mở Giới thiệu bằng Navigator.push** minh họa Navigator 1.0: mở một `MaterialPageRoute` ngoài go_router, trả chuỗi bằng `Navigator.pop` và hiện SnackBar ở Thực đơn.
 
-## 4. So sánh với Navigator 1.0
+Ô nhập `go()` trong app chỉ mô phỏng điều hướng tới URL nội bộ. **Deep link từ bên ngoài app** còn cần cấu hình Android App Links hoặc intent filter, và chưa được cấu hình trong dự án này.
 
-```dart
-// Navigator 1.0 – named routes kiểu cũ
-MaterialApp(
-  onGenerateRoute: (settings) {
-    if (settings.name == '/cart') {
-      return MaterialPageRoute(builder: (_) => CartScreen(cart: settings.arguments as Cart));
-    }
-    return null;
-  },
-);
-Navigator.pushNamed(context, '/cart', arguments: cart);
+## Dữ liệu CSV và ảnh
+
+`assets/data/foods.csv` mã hóa UTF-8, gồm các cột `id,name,price,description,image`. Để thêm món, thêm một dòng với ID duy nhất dạng `chu-thuong-gach-noi`, giá nguyên dương và đường dẫn ảnh nội bộ. Ví dụ:
+
+```csv
+bun-cha,Bún chả,40000,"Bún, chả nướng và nước mắm.",assets/images/bun-cha.jpg
 ```
 
-Navigator 1.0 quản lý stack bằng các lệnh push/pop, đủ dùng cho app nhỏ. Router API (qua go_router) khai báo màn hình theo URL, nên cần khi có deep link, web, hoặc mở thẳng một màn ở giữa luồng. Khi đó stack được dựng lại theo cây route thay vì do code tự đẩy từng màn. Đoạn code trên chỉ để so sánh, không có trong app.
+Đặt ảnh `bun-cha.jpg` vào `assets/images/`, ghi nguồn và giấy phép trong `assets/images/CREDITS.md`, rồi chạy lại app. Đặt trường chứa dấu phẩy hoặc dấu nháy kép trong dấu nháy kép; một dấu nháy kép bên trong được viết thành `""`. Nếu ảnh thiếu, app hiện tên món thay thế. Nếu CSV trống, sai cột hoặc sai dữ liệu, app hiện thông báo lỗi thực đơn.
 
-## 5. `push` khác `go` thế nào
+Sau khi thêm hoặc đổi asset CSV/ảnh, dừng hẳn phiên `flutter run` và chạy lại để Flutter đóng gói asset mới; hot reload không cập nhật danh sách asset trong bản đang chạy.
 
-- `context.push` xếp màn mới lên trên stack và có thể `await` để nhận kết quả khi màn đó `pop(result)`.
-- `context.go` nhảy tới URL như mở một liên kết, stack được dựng lại theo cây route và không nhận kết quả trả về.
+## Kịch bản demo khoảng 15 phút
 
-Ví dụ: nút "Mở thẳng /food/pho" dùng `go`. Màn Chi tiết mở ra, Back vẫn về Thực đơn (vì route con dựng stack `/` rồi `/food/pho`). Nhưng bấm "Thêm vào giỏ" thì giỏ không tăng, vì không có màn nào đang `await` kết quả. Đây là hành vi đúng, dùng để minh họa khác biệt giữa `go` và `push`.
+1. **3 phút:** giới thiệu route tree trong `lib/router.dart`, `Navigator`, `go_router`, `push`, `go`, `pop`, named route, `FoodRouteArgs` và `CartController`.
+2. **4 phút:** chọn Bánh mì, tăng số lượng lên 2, bấm **Thêm vào giỏ**; xem `id` trong URL, `pop(2)`, SnackBar và badge. Mở lại món để thấy dòng **Trong giỏ**, thêm đến 10 phần và quan sát nút bị khóa.
+3. **3 phút:** đổi số lượng rồi dùng Back AppBar hoặc Back hệ thống Android; chọn **Ở lại** để giữ số lượng, thử lại và chọn **Bỏ chọn**. Ở Thực đơn, nhấn Back một lần để thấy nhắc nhở, nhấn lần nữa để thoát.
+4. **2 phút:** mở Giỏ hàng bằng named route, Back để thấy giỏ còn; vào lại, xác nhận đặt hàng và xem badge biến mất. Mở trực tiếp `/cart` để thấy giỏ hiện tại được dùng làm fallback.
+5. **2 phút:** ở **Demo Router API**, nhập `/food/pho` rồi bấm **Đi** để xem Phở ở chế độ chỉ xem; dùng Back về Thực đơn. Nhập `/food/banh-mi` và nhấn Enter; thử `/food/pizza` để xem món không tồn tại, `/xyz` để xem màn **Không tìm thấy trang** rồi bấm **Về thực đơn**. Thử ô trống và `food/pho` để thấy lỗi dưới ô; kiểm tra giỏ vẫn còn.
+6. **1 phút:** mở màn **Giới thiệu** bằng Navigator 1.0, quay lại và xem SnackBar kết quả; mở CSV, giải thích thêm món mới.
 
-## 6. Sơ đồ luồng và kịch bản demo
+## Đóng gói bài nộp
 
-### Sơ đồ luồng
+Nộp mã nguồn, `pubspec.yaml`, `pubspec.lock`, `assets/`, `android/`, `test/` và README. `.gitignore` đã loại `.dart_tool/` và `build/`; không đưa hai thư mục sinh tự động này vào file nén hoặc Git. Có thể tạo file nén từ các thư mục/file cần nộp sau khi kiểm tra bằng `git status --short`.
 
-```
-Thực đơn (/) ──push('/food/:id')──► Chi tiết (/food/banh-mi)
-Thực đơn     ◄──pop(quantity)────── Chi tiết          (bấm "Thêm")
-Thực đơn     ◄──pop() / null──────── Chi tiết          (Back; nếu đã đổi số lượng → dialog "Bỏ chọn món?")
-
-Thực đơn ──pushNamed('cart', extra: giỏ)──► Giỏ hàng (/cart)
-Thực đơn ◄──pop(true)────────────────────── Giỏ hàng   (Đặt hàng → xóa giỏ + SnackBar)
-
-Nút "Mở thẳng /food/pho" ──go──► stack dựng lại: / → /food/pho   (Back về Thực đơn, không trả kết quả)
-Nút "Thử /xyz" ──go──► errorBuilder ──► Màn lỗi ──go('/')──► Thực đơn
-```
-
-### Kịch bản demo (khoảng 5 phút, Android emulator)
-
-Chỉ cho cả lớp xem dòng URL dưới AppBar ở mỗi bước.
-
-1. Truyền dữ liệu đi/về: chạm Bánh mì (URL `/food/banh-mi`), tăng lên 2, bấm Thêm, về Thực đơn, SnackBar "Đã thêm 2 Bánh mì", badge 2.
-2. Xử lý Back: chạm Bánh mì, đổi thành 3, bấm Back hệ thống, dialog "Bỏ chọn món?", chọn "Ở lại", Back lần nữa, chọn "Bỏ chọn", giỏ vẫn 2 (Chi tiết trả về `null`).
-3. Back không hỏi: chạm Trà sữa, không đổi gì, Back, về ngay.
-4. Named route + extra: bấm giỏ hàng (URL `/cart`), xem tổng, Đặt hàng, xác nhận, về Thực đơn, giỏ trống, SnackBar.
-5. Router API – go: bấm "Mở thẳng /food/pho", Chi tiết Phở mở ra, bấm Back, vẫn về Thực đơn.
-6. URL sai: bấm "Thử URL không tồn tại /xyz", màn lỗi, bấm "Về thực đơn".
-
-## 7. Nguồn ảnh
-
-Xem `assets/images/CREDITS.md`.
+Nguồn ảnh: `assets/images/CREDITS.md`.

@@ -10,6 +10,7 @@ dependencies:
   flutter:
     sdk: flutter
   go_router: ^14.6.0
+  csv: ^6.0.0
 
 dev_dependencies:
   flutter_test:
@@ -20,3 +21,4 @@ flutter:
   uses-material-design: true
   assets:
     - assets/images/
+    - assets/data/foods.csv

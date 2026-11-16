@@ -1,14 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:food_nav_demo/models/cart.dart';
+import 'package:food_nav_demo/state/cart_controller.dart';
 import 'package:food_nav_demo/utils/format.dart';
 import 'package:food_nav_demo/widgets/current_url_bar.dart';
 import 'package:food_nav_demo/widgets/food_image.dart';
 
 class CartScreen extends StatelessWidget {
   final Cart? cart;
+  final CartController? cartController;
 
-  const CartScreen({super.key, this.cart});
+  const CartScreen({super.key, this.cart, this.cartController});
 
   Future<void> _order(BuildContext context, int total) async {
     final ok = await showDialog<bool>(
@@ -27,21 +29,29 @@ class CartScreen extends StatelessWidget {
         ],
       ),
     );
-    if (ok == true && context.mounted) {
-      // [NAV] trả true về Thực đơn để xóa giỏ và báo thành công
+    if (ok != true || !context.mounted) return;
+
+    // [NAV] xóa giỏ ở cấp app rồi trả true về Thực đơn.
+    cartController?.clear();
+    ScaffoldMessenger.of(context)
+      ..removeCurrentSnackBar()
+      ..showSnackBar(const SnackBar(content: Text('Đặt hàng thành công')));
+    if (context.canPop()) {
       context.pop(true);
+    } else {
+      context.goNamed('menu');
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final cart = this.cart; // biến cục bộ để Dart promote kiểu non-null
+    // extra có thể bị mất khi mở thẳng bằng URL → dùng giỏ ở cấp app.
+    final cart = this.cart ?? cartController?.cart;
     final appBar = AppBar(
       title: const Text('Giỏ hàng'),
       bottom: const CurrentUrlBar(),
     );
 
-    // [NAV] extra bị mất khi mở thẳng bằng URL → cart = null
     if (cart == null || cart.isEmpty) {
       return Scaffold(
         appBar: appBar,
@@ -54,8 +64,10 @@ class CartScreen extends StatelessWidget {
                 const Text('Giỏ hàng trống'),
                 const SizedBox(height: 16),
                 FilledButton(
-                  // [NAV] pop: đóng màn hiện tại, quay về màn bên dưới
-                  onPressed: () => context.pop(),
+                  // [NAV] pop nếu có màn trước; go nếu vào thẳng bằng URL
+                  onPressed: () => context.canPop()
+                      ? context.pop()
+                      : context.goNamed('menu'),
                   child: const Text('Về thực đơn'),
                 ),
               ],
@@ -93,10 +105,14 @@ class CartScreen extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('Tổng cộng', style: textTheme.titleLarge),
-                      Text(formatPrice(total), style: textTheme.titleLarge),
+                      Expanded(
+                          child:
+                              Text('Tổng cộng', style: textTheme.titleLarge)),
+                      Flexible(
+                          child: Text(formatPrice(total),
+                              textAlign: TextAlign.end,
+                              style: textTheme.titleLarge)),
                     ],
                   ),
                   const SizedBox(height: 16),

@@ -3,7 +3,7 @@ class Food {
   final String name;
   final int price; // đơn vị đồng
   final String description;
-  final String image; // 'assets/images/banh-mi.jpg' hoặc URL https
+  final String image; // đường dẫn ảnh nội bộ, ví dụ assets/images/banh-mi.jpg
 
   const Food({
     required this.id,

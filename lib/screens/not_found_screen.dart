@@ -24,8 +24,9 @@ class NotFoundScreen extends StatelessWidget {
                   textAlign: TextAlign.center),
               const SizedBox(height: 16),
               FilledButton(
-                // [NAV] go thay toàn bộ stack về '/'
-                onPressed: () => context.go('/'),
+                // [NAV] pop nếu màn lỗi được push; go nếu vào thẳng bằng URL
+                onPressed: () =>
+                    context.canPop() ? context.pop() : context.goNamed('menu'),
                 child: const Text('Về thực đơn'),
               ),
             ],

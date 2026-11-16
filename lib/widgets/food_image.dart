@@ -20,19 +20,16 @@ class FoodImage extends StatelessWidget {
           child: Text(food.name, textAlign: TextAlign.center),
         );
 
+    // CSV chỉ chấp nhận ảnh nội bộ trong assets/images/ (xem parseFoodsCsv).
     return ClipRRect(
       borderRadius: BorderRadius.circular(12),
-      child: food.image.startsWith('http')
-          ? Image.network(food.image,
-              width: width,
-              height: height,
-              fit: BoxFit.cover,
-              errorBuilder: fallback)
-          : Image.asset(food.image,
-              width: width,
-              height: height,
-              fit: BoxFit.cover,
-              errorBuilder: fallback),
+      child: Image.asset(
+        food.image,
+        width: width,
+        height: height,
+        fit: BoxFit.cover,
+        errorBuilder: fallback,
+      ),
     );
   }
 }
